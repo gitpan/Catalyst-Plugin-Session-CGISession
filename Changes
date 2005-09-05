@@ -1,0 +1,8 @@
+Revision history for Catalyst-Plugin-Session-CGISession
+
+0.0.2  Sun Sep  4 23:13:00 2005
+       Added CGI::Session passthru methods, e.g. param(), expire()
+
+0.0.1  Sat Sep  3 17:30:00 2005
+       Initial release.
+
