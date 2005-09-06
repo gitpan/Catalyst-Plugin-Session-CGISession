@@ -3,7 +3,7 @@ package Catalyst::Plugin::Session::CGISession;
 use warnings;
 use strict;
 
-our $VERSION = '0.01_02';
+our $VERSION = '0.01_03';
 
 use base qw/Class::Data::Inheritable Class::Accessor::Fast/;
 use CGI::Session;
@@ -14,18 +14,9 @@ use URI;
 use URI::Find;
 use Data::Dumper;
 
-# TODOS:
-#
-#   Put in the RATIONALE section, saying that Session::FastMmap was
-#       missing resetting expires.
-#
+
 # QUESTIONS:
 #
-#
-#   Is there any way to prevent session processing when static content is
-#       (about to be) served?  Hmm, Static::Simple hooks into dispatch()
-#       which is called after all the prepare steps.  And session() is
-#       being called from Authentication::CDBI::prepare_action()
 #
 #   Shouldn't the body text rewrite in finalize be limited to
 #       content-type qr{text/x?html} ?
@@ -51,6 +42,13 @@ use Data::Dumper;
 #
 #
 # ANSWERS:   (partial or otherwise)
+#
+#   Is there any way to prevent session processing when static content is
+#       (about to be) served?  Hmm, Static::Simple hooks into dispatch()
+#       which is called after all the prepare steps.  And session() is
+#       being called from Authentication::CDBI::prepare_action()
+#     * AndyG changes Static::Simple to hook into prepare_action() chain
+#       and short-circuit that to avoid session access on static files.
 #
 #   Check out the ramifications of ip_match and remote_addr - do we need
 #       to disable or allow disabling of the ip_match checks?  If enabled
@@ -96,6 +94,7 @@ use Data::Dumper;
 #     - URL embedded session id checking is stricter
 #     - session expires time reset by access (expiration time is
 #           relative to last access, not session creation)
+
 
 
 our $DEFAULT_EXPIRATION_TIME     = 60 * 60 * 24;
@@ -248,7 +247,7 @@ sub session {
     # warn sprintf "CgiS::session(%s) called from (%s,%s)\n", join('|',@_), ( caller() )[1,2];
 
     return  if ! $c->_cgi_session_created;
-    
+
   # if ( my $cgis_dump = $c->session_dump(1) ) {
   #     $c->log->debug( $cgis_dump );
   # }
@@ -263,9 +262,9 @@ sub _cgi_session_created {
     # warn sprintf "CgiS::_cgi_session_created(%s) called from (%s,%s)\n", join('|',@_), ( caller() )[1,2];
 
     my $cgisess;
-    
+
     # Is session area already present?
-    if ( defined $c->{_session_cgis} 
+    if ( defined $c->{_session_cgis}
       && defined $c->{_session_cgis}->{cgisess} ) {
         $cgisess = $c->{_session_cgis}->{cgisess};
     }
@@ -590,44 +589,9 @@ sub session_dump_at_close {
 # -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
 
-
-
 1; # Magic true value required at end of module
 __END__
 
-
- return  $c->{_session_cgis}->{session_dump_request} = $type;
-if(0){
-        my  $cgis_dump = $cgisess->dump();
-        $c->log->debug( $cgis_dump );
-}elsif(0){
-        my  $data_ref  = $cgisess->dataref();
-        my  $cgis_dump = Data::Dumper->Dump([ $data_ref ],['*cgis_data']);
-        $c->log->debug( $cgis_dump );
-}else{
-        my  $data_ref  = $c->{_session_cgis}->{session_data};
-        my  $cgis_dump = Data::Dumper->Dump([ $data_ref ],['*cgis_session_data']);
-        $c->log->debug( $cgis_dump );
-}
-
-    # -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-#warn sprintf "CgiS::setup(%s) called from (%s,%s)\n", join('|',@_), ( caller() )[1,2];
-#warn sprintf "CgiS::prepare_cookies(%s) called from (%s,%s)\n", join('|',@_), ( caller() )[1,2];
-# warn sprintf "CgiS::dummy_query::param(%s) called ...\n", join('|',@_);
-
-warn sprintf "  Incoming configuration values:\n";
-warn sprintf "      cgis_dsn:       '%s'\n",
-    $self->config->{session}->{cgis_dsn}     || '<undefined>';
-warn sprintf "      cgis_options:   '%s'\n",
-    $self->config->{session}->{cgis_options} || '<undefined>';
-    if ( ref $self->config->{session}->{cgis_options} ) {
-        warn sprintf "      cgis_options:   '%s'\n",
-            join('|', %{ $self->config->{session}->{cgis_options} });
-    }
-warn sprintf "  We think we are closing a CGIS ver '%s' object\n", $CGI::Session::VERSION;
-  # my  $param_data_ref   = $cgisess->param( $SESSION_DATA_PARAMETER_NAME );
-  # warn sprintf "  We see our data ref '%s' and CGIS data ref '%s'\n",
-  #                                 $session_data_ref, $param_data_ref;
 
 # We need to check under what conditions CGIS might try to access CGI
 # parameters by itself.
@@ -647,6 +611,9 @@ warn sprintf "  We think we are closing a CGIS ver '%s' object\n", $CGI::Session
 #
 # I could create a dummy package and bless an object into it, that
 # simply returns undef for every call to ->param() or ->cookie() ?
+
+
+# -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 
 
 =head1 NAME
@@ -681,6 +648,45 @@ This document describes Catalyst::Plugin::Session::CGISession version 0.0.1
     Write a full description of the module and its features here.
     Use subsections (=head2, =head3) as appropriate.
 
+This plugin provides the same functionality as the original
+L<Session::FastMmap|Catalyst::Plugin::Session::FastMmap> plugin but uses the
+L<CGI::Session|CGI::Session> module for the session data management.
+
+The motivations to develop this plugin were:
+
+=over 4
+
+=item *
+      provide better session data expiration handling, as is
+      available through the CGI::Session module
+
+
+=item *
+      provide an easier migration to Catalyst for applications that
+      have been using CGI::Session and its param() and other methods
+
+
+=item *
+      allow Windows users to avoid the workarounds needed to make
+      Cache::FastMmap work
+
+=back
+
+The difference in session expiration between this plugin and
+L<Session::FastMmap|Catalyst::Plugin::Session::FastMmap>
+is small but important.  CGI::Session resets the expiration time limit
+on every access to the session.  A one day time limit means the session
+data disappears 24 hours after the I<last> request using that session.
+With Session::FastMmap the limit would be 24 hours after the I<first>
+request, when the session is created.
+
+While this plugin adds some functions and methods beyond those available
+with L<Session::FastMmap|Catalyst::Plugin::Session::FastMmap>,
+new development most likely should avoid using these features.
+Try to use only the common feature, L<session()|/session>,
+to stay compatible with L<Session::FastMmap|Catalyst::Plugin::Session::FastMmap>
+and other future session plugins.
+
 
 =head1 INTERFACE
 
@@ -694,6 +700,7 @@ Everything stored into this hash will be saved to storage when a
 request completes.  Upon the next request with the same session id
 the saved data will again be available through this method.
 
+This method performs the same functions as Session::FastMmap::session.
 
 =head3 uri
 
@@ -701,6 +708,8 @@ Extends an uri with session id if needed.
 This is used when the C<{rewrite}> configuration option is enabled.
 
     my $uri = $c->uri('http://localhost/foo');
+
+This method performs the same functions as Session::FastMmap::uri.
 
 
 =head2 EXPOSED CGI::SESSION METHODS
@@ -713,13 +722,14 @@ A small number of CGI::Session methods are exposed through this plugin.
 
 A single session data hash may be too restrictive for some applications.
 In particular, some applications may want to expire individual data items
-separately, as is provided by CGI::Session.  See the CGI::Session
-L<param()|CGI::Session/"item_param"> method documentation for more details.
+separately, as is allowed by CGI::Session.  See the CGI::Session
+L<C<param()>|CGI::Session/"param"> method documentation for more details.
+
 
 =head3 session_expire
 
 Setting a data item-specific expiration time is done with the CGI::Session
-L<expire()|CGI::Session/"item_expire"> method.  Please see that documentation
+L<expire()|CGI::Session/expire> method.  Please see that documentation
 for details.
 
 =head3 session_is_new
@@ -727,7 +737,7 @@ for details.
 It may be useful for applications to know when a session is newly created
 and not a continuation of a previous session.  This is usually detectable
 by checking for missing previous values.  But if an application really has
-to know, the CGI::Session L<is_new()|CGI::Session/"item_is_new"> method
+to know, the CGI::Session L<is_new()|CGI::Session/is_new> method
 will tell you.  Please see that documentation for details.
 
 =head3 session_flush
@@ -735,13 +745,13 @@ will tell you.  Please see that documentation for details.
 The persistent session data hash is written to backing storage at the end
 of every request.  If for some reason an application needs to force an
 update early, this method will call the
-CGI::Session L<flush()|CGI::Session/"item_flush"> method.
+CGI::Session L<flush()|CGI::Session/flush> method.
 
 =head3 session_dump
 
 =head3 session_dump_at_close
 
-CGI::Session provides a  L<dump()|CGI::Session/"item_dump"> method as a
+CGI::Session provides a  L<dump()|CGI::Session/dump> method as a
 convenience during testing.  This plugin extends that method to dump a
 varying amount of data and also postponing the request, dumping the data
 at end of request into the debug log.
@@ -758,7 +768,7 @@ You may specify how much data to dump using a single number value:
 =item   = 1   dump the session data hash returned by C<$c-E<gt>session()>
 
 =item   = 2   dump the whole CGI::Session parameters hash, including
-              parameters set using C<session_param()>
+              parameters set using L< C<session_param()>|/session_param>
 
 =item   = 3   dump the entire CGI::Session object
 
@@ -821,6 +831,17 @@ found in $c->config->{session} data.
 
 =head2 CONFIG OPTIONS FOR MODULE
 
+=head3 expires
+
+How many seconds until the session expires. The default is 24 hours.
+
+Note that the underlying CGI::Session handler resets the session expiration
+time upon every access.  Thus a session will not normally expire until this
+many seconds have elapsed since the I<last> access to the session.  This is
+a useful difference from the Session::FastMmap plugin which sets the
+expiration time of a session only once at session creation.
+
+
 =head3 rewrite
 
 One method for remembering the current session id value from one request
@@ -834,46 +855,34 @@ redirect URL when redirect is used.
 
 See method C<uri()>
 
-=head3 expires
-
-How many seconds until the session expires. The default is 24 hours.
-
-Note that the underlying CGI::Session handler resets the session
-expiration time upon every access.  Thus a session will
-not normally expire until this many seconds have elapsed since the
-B<last> access to the session.
-
-This is a useful difference from the Session::FastMmap plugin which
-sets the expiration time of a session only once at session creation.
-
+This configuration option requests the same feature as Session::FastMmap provides.
 
 =head2 CONFIG OPTIONS FOR COOKIES
 
 =head3 cookie_expires
 
 how many seconds until the session cookie expires at the client browser.
-See expires option in L<CGI::Cookie> for format.
+See expires option in L<CGI::Cookie|CGI::Cookie> for format.
 default is the expires option described above.  This option will
 override the default when specified.
 
 =head3 cookie_domain
 
 Domain set in the session cookie.
-See domain option in L<CGI::Cookie> for format.
+See domain option in L<CGI::Cookie|CGI::Cookie> for format.
 default is none.
 
 =head3 cookie_path
 
 Path set in the session cookie.
-See path option in L<CGI::Cookie> for format.
+See path option in L<CGI::Cookie|CGI::Cookie> for format.
 default is none.
 
 =head3 cookie_secure
 
 Secure flag set in the session cookie.
-See secure option in L<CGI::Cookie> for format.
+See secure option in L<CGI::Cookie|CGI::Cookie> for format.
 default is none.
-
 
 
 
@@ -883,7 +892,7 @@ You may want to explicitly control how and where CGI::Session stores
 session data files.  While this module provides defaults
 for parameters to CGI::Session, your needs may require specific values.
 
-You may specify values to be given directly to the CGI::Session new()
+You may specify values to be given directly to the CGI::Session C<new()>
 method using the C<cgis_dsn> and C<cgis_options> configuration parameters.
 
 =head3 cgis_dsn
@@ -892,7 +901,7 @@ This option value becomes the first argument to the CGI::Session
 C<new()> call, C<$dsn> or B<Data Source Name>.  This parameter
 can configure the backing storage type, the method for serializing data,
 and the method for creating session id values.  It is a combination
-of one, two or three specifications (see L<CGI::Session/"new()">)
+of one, two or three specifications (see L<new()|CGI::Session/new>)
 
 The default value used by this module is:
 
@@ -930,7 +939,7 @@ An example in the form of a section from a YAML file would be:
 
 
 Details about the various parameters for drivers and id generation
-modules can be found in the L<CGI::Session> documentation.
+modules can be found in the L<CGI::Session|CGI::Session> documentation.
 
 Database driver modules support the following parameters:
 
@@ -1167,15 +1176,15 @@ module that might need session data.
 
 =over 4
 
-=item  L<Catalyst>
+=item  L<Catalyst|Catalyst>
 
-=item  L<Catalyst::Plugin::Session::FastMmap>
+=item  L<Catalyst::Plugin::Session::FastMmap|Catalyst::Plugin::Session::FastMmap>
 
-=item  L<Catalyst::Plugin::Session::Flex>
+=item  L<Catalyst::Plugin::Session::Flex|Catalyst::Plugin::Session::Flex>
 
-=item  L<CGI::Session>
+=item  L<CGI::Session|CGI::Session>
 
-=item  L<CGI::Cookie>
+=item  L<CGI::Cookie|CGI::Cookie>
 
 =back
 
