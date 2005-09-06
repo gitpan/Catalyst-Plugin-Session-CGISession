@@ -3,7 +3,7 @@ package Catalyst::Plugin::Session::CGISession;
 use warnings;
 use strict;
 
-our $VERSION = '0.01_03';
+our $VERSION = '0.02';
 
 use base qw/Class::Data::Inheritable Class::Accessor::Fast/;
 use CGI::Session;
@@ -673,7 +673,7 @@ The motivations to develop this plugin were:
 =back
 
 The difference in session expiration between this plugin and
-L<Session::FastMmap|Catalyst::Plugin::Session::FastMmap>
+C<Session::FastMmap>
 is small but important.  CGI::Session resets the expiration time limit
 on every access to the session.  A one day time limit means the session
 data disappears 24 hours after the I<last> request using that session.
@@ -681,10 +681,10 @@ With Session::FastMmap the limit would be 24 hours after the I<first>
 request, when the session is created.
 
 While this plugin adds some functions and methods beyond those available
-with L<Session::FastMmap|Catalyst::Plugin::Session::FastMmap>,
+with C<Session::FastMmap>,
 new development most likely should avoid using these features.
 Try to use only the common feature, L<session()|/session>,
-to stay compatible with L<Session::FastMmap|Catalyst::Plugin::Session::FastMmap>
+to stay compatible with C<Session::FastMmap>
 and other future session plugins.
 
 
@@ -765,12 +765,12 @@ You may specify how much data to dump using a single number value:
 
 =over 4
 
-=item   = 1   dump the session data hash returned by C<$c-E<gt>session()>
+=item * =1   dump the session data hash returned by  L< C<session()>|/session>
 
-=item   = 2   dump the whole CGI::Session parameters hash, including
-              parameters set using L< C<session_param()>|/session_param>
+=item * =2   dump the whole CGI::Session parameters hash, including
+             parameters set using L< C<session_param()>|/session_param>
 
-=item   = 3   dump the entire CGI::Session object
+=item * =3   dump the entire CGI::Session object
 
 =back
 
@@ -816,9 +816,8 @@ will be used.
 
 This method is called as part of the end of request processing chain.
 
-If session data has been created or read (i.e. the C<-E<gt>session()>
-method has been used) then this method is responsible for writing
-session data out to backing storage.
+If session data has been created or read then this method is responsible for
+writing session data out to backing storage.
 
 If the C<rewrite> configuration option is enabled then URI rewriting
 is also performed on body text and any redirect URL.
@@ -826,8 +825,8 @@ is also performed on body text and any redirect URL.
 
 =head1 CONFIGURATION AND ENVIRONMENT
 
-Catalyst::Plugin::Session::CGISession uses configuration options as
-found in $c->config->{session} data.
+Session::CGISession uses configuration options as
+found in C<$c-E<gt>config-E<gt>{session}> data.
 
 =head2 CONFIG OPTIONS FOR MODULE
 
@@ -898,10 +897,10 @@ method using the C<cgis_dsn> and C<cgis_options> configuration parameters.
 =head3 cgis_dsn
 
 This option value becomes the first argument to the CGI::Session
-C<new()> call, C<$dsn> or B<Data Source Name>.  This parameter
+L<C<new()>|CGI::Session/new> call, C<$dsn> or B<Data Source Name>.  This parameter
 can configure the backing storage type, the method for serializing data,
 and the method for creating session id values.  It is a combination
-of one, two or three specifications (see L<new()|CGI::Session/new>)
+of one, two or three specifications.
 
 The default value used by this module is:
 
@@ -939,7 +938,7 @@ An example in the form of a section from a YAML file would be:
 
 
 Details about the various parameters for drivers and id generation
-modules can be found in the L<CGI::Session|CGI::Session> documentation.
+modules can be found in the L<CGI::Session|CGI::Session/distribution> documentation.
 
 Database driver modules support the following parameters:
 
@@ -1070,7 +1069,7 @@ unavailable modules.
 
 When CGI::Session returns an error the error message will be repeated in
 the Catalyst error log.  Below is an example error message resulting
-from a misspelled name in the <cgis_dsn> configuration parameter:
+from a misspelled name in the C<cgis_dsn> configuration parameter:
 
   [Thu ... 2005] [catalyst] [e]
     Unable to create CGI::Session object, error:

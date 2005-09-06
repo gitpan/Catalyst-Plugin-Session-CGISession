@@ -1,4 +1,4 @@
-Catalyst-Plugin-Session-CGISession version 0.0.1
+Catalyst-Plugin-Session-CGISession version 0.2
 
 NAME
     Catalyst::Plugin::Session::CGISession - use CGI::Session for persistent
@@ -17,9 +17,35 @@ SYNOPSIS
 
 
 DESCRIPTION
+    This plugin provides the same functionality as the original
+    Session::FastMmap plugin but uses the CGI::Session module for the
+    session data management.
+
+    The motivations to develop this plugin were:
+
+    * provide better session data expiration handling, as is available
+    through the CGI::Session module
+    * provide an easier migration to Catalyst for applications that have
+    been using CGI::Session and its param() and other methods
+    * allow Windows users to avoid the workarounds needed to make
+    Cache::FastMmap work
+
+    The difference in session expiration between this plugin and
+    Session::FastMmap is small but important. CGI::Session resets the
+    expiration time limit on every access to the session. A one day time
+    limit means the session data disappears 24 hours after the *last*
+    request using that session. With Session::FastMmap the limit would be 24
+    hours after the *first* request, when the session is created.
+
+    While this plugin adds some functions and methods beyond those available
+    with Session::FastMmap, new development most likely should avoid using
+    these features. Try to use only the common feature, session(), to stay
+    compatible with "Session::FastMmap" and other future session plugins.
 
 
 DEPENDENCIES
+
+  CGI::Session
     This module was developed using the first CGI::Session 4.00 release. It
     was subsequently tested under 3.95, the last 3.x version.
 
@@ -42,11 +68,10 @@ DEPENDENCIES
 
         Linux
 
-            Planned: 
             CGI::Session 3.95   'File' driver
+                Note: this driver leaves session data tainted
+
             CGI::Session 3.95   MySQL 3.23.x
-            CGI::Session 4.00   'File' driver
-            CGI::Session 4.00   MySQL 3.23.x
 
 
 INSTALLATION
@@ -66,13 +91,6 @@ following commands:
     make
     make test
     make install
-
-
-DEPENDENCIES
-
-  CGI::Session
-    This plugin module was developed and tested under CGI::Session 4.0x 
-    and then tested under CGI::Session 3.95.
 
 
 THANKS
