@@ -1,5 +1,9 @@
 Revision history for Catalyst-Plugin-Session-CGISession
 
+0.3    Thu Sep  8 16:53:00 2005
+       Added session_delete() to access CGI::Session::delete() 
+         (requested by Schwabe)
+
 0.2    Mon Sep  5 22:27:00 2005
        Fixed more POD issues; ready for release
 

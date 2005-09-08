@@ -3,7 +3,7 @@ package Catalyst::Plugin::Session::CGISession;
 use warnings;
 use strict;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use base qw/Class::Data::Inheritable Class::Accessor::Fast/;
 use CGI::Session;
@@ -531,6 +531,17 @@ sub session_flush {
 }
 
 
+sub session_delete {
+    my ( $c ) = @_;
+    # warn sprintf "CgiS::delete(%s) called from (%s,%s)\n", join('|',@_), ( caller() )[1,2];
+
+    my  $cgisess = $c->_cgi_session_created;
+    return  if ! defined $cgisess;
+
+    return $cgisess->delete();
+}
+
+
 sub session_is_new {
     my ( $c ) = @_;
     # warn sprintf "CgiS::is_new(%s) called from (%s,%s)\n", join('|',@_), ( caller() )[1,2];
@@ -746,6 +757,13 @@ The persistent session data hash is written to backing storage at the end
 of every request.  If for some reason an application needs to force an
 update early, this method will call the
 CGI::Session L<flush()|CGI::Session/flush> method.
+
+=head3 session_delete
+
+Calls the CGI:Session L<delete()|CGI::Session/delete> method which marks
+the session as "to be deleted."  Note that the session data is not actually
+deleted from storage until the current request finishes, or if you
+explicitly call C<session_flush()>.
 
 =head3 session_dump
 
