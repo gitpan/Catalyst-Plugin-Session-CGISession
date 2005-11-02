@@ -3,7 +3,7 @@ package Catalyst::Plugin::Session::CGISession;
 use warnings;
 use strict;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use base qw/Class::Data::Inheritable Class::Accessor::Fast/;
 use CGI::Session;
@@ -170,8 +170,8 @@ package Catalyst::Plugin::Session::CGISession;
 #   been set.
 
 sub setup {
-    my ( $self ) = @_;
     # warn sprintf "CgiS::setup(%s) called ...\n", join('|',@_);
+    my  $self = shift;
 
     # Establish default values for options
 
